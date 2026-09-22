@@ -1,0 +1,1460 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Một bất ngờ nhỏ dành cho Vy</title>
+
+<!-- ============================================================
+     FONTS
+     - Cormorant Garamond: chữ serif thanh lịch, dùng cho nội dung thư
+     - Mali: chữ tròn, ấm, hơi viết tay, hỗ trợ tiếng Việt, dùng cho
+       tiêu đề / lời thoại / nút bấm
+     ============================================================ -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Mali:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* =====================================================================
+   0. THIẾT LẬP CHUNG
+   ===================================================================== */
+:root{
+  /* ---- bảng màu Trung Thu: navy / tím than / vàng trăng / cam đèn lồng ---- */
+  --sky-deep:      #050a1c;
+  --sky-navy:      #0c1638;
+  --sky-indigo:    #1c2350;
+  --moon-gold:     #ffedc2;
+  --moon-glow:     #ffdf9e;
+  --lantern-orange:#ff8a4c;
+  --lantern-red:   #e0573a;
+  --paper-cream:   #f4e9cd;
+  --paper-shadow:  #d9c79c;
+  --ink:           #2e2416;
+  --ink-soft:      #5a4c34;
+  --gold-glow:     #ffd98a;
+
+  --ease-soft: cubic-bezier(.22,.61,.36,1);
+}
+
+*,*::before,*::after{ box-sizing:border-box; }
+
+html,body{
+  margin:0; padding:0;
+  width:100%; height:100%;
+  overflow-x:hidden;
+  background:var(--sky-deep);
+  color:var(--paper-cream);
+  font-family:'Cormorant Garamond', serif;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* Lưu ý: trang này là một món quà mang tính trải nghiệm/kể chuyện — toàn bộ
+   chuyển động (chữ hiện dần, thư mở ra...) chính là nội dung của trải nghiệm,
+   nên ở đây KHÔNG ép rút ngắn animation theo prefers-reduced-motion như một
+   trang thông tin thông thường, để tránh việc mọi hiệu ứng bị triệt tiêu
+   ngoài ý muốn trên các máy đang bật sẵn chế độ giảm chuyển động. */
+
+button{
+  font-family:'Mali', sans-serif;
+  cursor:pointer;
+  border:none;
+  background:none;
+  color:inherit;
+}
+button:focus-visible, .icon-btn:focus-visible{
+  outline:2px solid var(--gold-glow);
+  outline-offset:3px;
+}
+
+h1,h2,h3,p{ margin:0; }
+
+/* =====================================================================
+   1. KHUNG CẢNH (SCENES) — mỗi phần là 1 tầng fullscreen, ẩn/hiện bằng
+      opacity + visibility để giữ transition mượt và không giật layout
+   ===================================================================== */
+.scene{
+  position:fixed; inset:0;
+  width:100%; height:100%;
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  transition:opacity 1.4s var(--ease-soft);
+  overflow:hidden;
+}
+.scene.is-active{
+  opacity:1;
+  visibility:visible;
+  pointer-events:auto;
+}
+
+/* nền bầu trời đêm dùng chung cho tất cả các cảnh */
+.sky-bg{
+  position:absolute; inset:0;
+  background:
+    radial-gradient(ellipse 60% 40% at 50% 8%, rgba(255,223,158,.10), transparent 60%),
+    linear-gradient(180deg, var(--sky-deep) 0%, var(--sky-navy) 55%, var(--sky-indigo) 100%);
+  transition:filter 1.2s var(--ease-soft);
+}
+
+/* lớp mờ tối để tạo transition "tối dần rồi sáng lại" */
+.fade-veil{
+  position:absolute; inset:0;
+  background:#000;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity 1.1s ease;
+  z-index:40;
+}
+.fade-veil.is-showing{ opacity:.86; }
+
+/* =====================================================================
+   2. BẦU TRỜI: sao, mây, trăng, đèn lồng, mái nhà
+   ===================================================================== */
+.stars{ position:absolute; inset:0; }
+.star{
+  position:absolute;
+  width:2px; height:2px;
+  border-radius:50%;
+  background:#fff5da;
+  animation:twinkle 3.2s ease-in-out infinite;
+  opacity:.5;
+}
+@keyframes twinkle{
+  0%,100%{ opacity:.15; transform:scale(1); }
+  50%{ opacity:1; transform:scale(1.6); }
+}
+
+.clouds{ position:absolute; inset:0; will-change:transform; }
+.cloud{
+  position:absolute;
+  background:linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.02));
+  border-radius:50%;
+  filter:blur(6px);
+  animation:drift 90s linear infinite;
+}
+@keyframes drift{
+  from{ transform:translateX(-10vw); }
+  to{ transform:translateX(110vw); }
+}
+
+.moon-wrap{
+  position:absolute;
+  top:8%; left:50%;
+  transform:translateX(-50%);
+  will-change:transform;
+}
+.moon-halo{
+  position:absolute;
+  top:50%; left:50%;
+  width:340px; height:340px;
+  transform:translate(-50%,-50%);
+  background:radial-gradient(circle, rgba(255,223,158,.35) 0%, rgba(255,223,158,.12) 35%, transparent 70%);
+  border-radius:50%;
+  filter:blur(2px);
+  transition:opacity 1.4s ease, transform 1.4s ease;
+}
+.moon{
+  position:relative;
+  width:110px; height:110px;
+  border-radius:50%;
+  background:radial-gradient(circle at 38% 32%, #fffdf3, var(--moon-gold) 55%, var(--moon-glow) 100%);
+  box-shadow:0 0 40px rgba(255,223,158,.55), 0 0 90px rgba(255,223,158,.25);
+  transition:box-shadow 1.4s ease;
+}
+.moon::before, .moon::after{
+  /* vết trăng nhẹ, chỉ để có chiều sâu, không vẽ mặt trăng hoạt hình */
+  content:'';
+  position:absolute;
+  border-radius:50%;
+  background:rgba(198,168,120,.25);
+}
+.moon::before{ width:22px; height:22px; top:22px; left:20px; }
+.moon::after{ width:14px; height:14px; top:58px; left:60px; }
+
+.scene.is-active .moon-halo{ opacity:1; }
+.scene.is-active .moon{ box-shadow:0 0 60px rgba(255,223,158,.75), 0 0 130px rgba(255,223,158,.4); }
+
+.lanterns-layer{ position:absolute; inset:0; will-change:transform; }
+.lantern{
+  position:absolute;
+  width:34px; height:44px;
+  transform-origin:top center;
+  animation:sway 5.5s ease-in-out infinite;
+}
+.lantern .body{
+  width:100%; height:100%;
+  border-radius:50% 50% 45% 45%;
+  background:linear-gradient(180deg, var(--lantern-orange), var(--lantern-red));
+  box-shadow:0 0 18px rgba(255,120,70,.55), inset 0 0 10px rgba(255,220,180,.5);
+  position:relative;
+}
+.lantern .body::before{ /* dây treo */
+  content:'';
+  position:absolute;
+  top:-14px; left:50%;
+  width:1px; height:14px;
+  background:rgba(255,235,200,.4);
+  transform:translateX(-50%);
+}
+.lantern .body::after{ /* tua dưới đèn */
+  content:'';
+  position:absolute;
+  bottom:-8px; left:50%;
+  width:2px; height:10px;
+  background:rgba(255,200,150,.6);
+  transform:translateX(-50%);
+}
+@keyframes sway{
+  0%,100%{ transform:rotate(-4deg); }
+  50%{ transform:rotate(4deg); }
+}
+
+.roofline{
+  position:absolute;
+  left:0; right:0; bottom:0;
+  height:16vh;
+  background:
+    linear-gradient(180deg, transparent, rgba(3,7,20,.55) 40%, rgba(3,7,20,.95) 100%);
+}
+.roofline svg{ position:absolute; bottom:0; width:100%; height:100%; opacity:.9; }
+
+/* đèn ông sao trung tâm, dùng CSS clip-path để vẽ ngôi sao 5 cánh */
+.star-lantern{
+  position:relative;
+  width:120px; height:120px;
+  margin:0 auto;
+  filter:drop-shadow(0 0 22px rgba(255,190,110,.65));
+}
+.star-lantern .frame{
+  position:absolute; inset:0;
+  clip-path:polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  background:
+    radial-gradient(circle at 50% 45%, #fff2cf, var(--lantern-orange) 60%, var(--lantern-red) 100%);
+  animation:starGlow 2.6s ease-in-out infinite;
+}
+@keyframes starGlow{
+  0%,100%{ filter:brightness(1); }
+  50%{ filter:brightness(1.18); }
+}
+
+/* =====================================================================
+   3. CẢNH 1 — MỞ ĐẦU
+   ===================================================================== */
+#scene-intro .content{
+  position:relative; z-index:5;
+  height:100%;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:flex-end;
+  text-align:center;
+  padding:0 24px 9vh;
+  gap:28px;
+}
+#scene-intro .star-lantern{ margin-bottom:6px; }
+
+.intro-line{
+  font-family:'Mali', sans-serif;
+  font-size:clamp(1.25rem, 2.6vw + .6rem, 2.1rem);
+  color:#fff6e2;
+  text-shadow:0 0 22px rgba(255,210,140,.35);
+  max-width:20ch;
+  line-height:1.5;
+  transition:opacity 1.1s ease, filter 1.1s ease;
+}
+.intro-line.is-leaving{ opacity:0; filter:blur(6px); }
+
+.cta{
+  font-size:1.05rem;
+  padding:14px 34px;
+  border-radius:999px;
+  color:#3a2a12;
+  background:linear-gradient(180deg, #ffe9b8, var(--gold-glow));
+  box-shadow:0 0 0 1px rgba(255,255,255,.35) inset, 0 6px 24px rgba(255,190,90,.35);
+  transition:transform .35s var(--ease-soft), box-shadow .35s ease;
+  animation:ctaPulse 2.6s ease-in-out infinite;
+}
+.cta:hover{ transform:scale(1.06); box-shadow:0 0 0 1px rgba(255,255,255,.5) inset, 0 8px 30px rgba(255,190,90,.55); }
+.cta:active{ transform:scale(.97); }
+@keyframes ctaPulse{
+  0%,100%{ box-shadow:0 0 0 1px rgba(255,255,255,.35) inset, 0 6px 24px rgba(255,190,90,.35); }
+  50%{     box-shadow:0 0 0 1px rgba(255,255,255,.45) inset, 0 6px 34px rgba(255,190,90,.55); }
+}
+.cta.is-hidden{ display:none; }
+
+/* =====================================================================
+   4. CẢNH 2 — LÁ THƯ
+   ===================================================================== */
+#scene-letter .content{
+  position:relative; z-index:5;
+  height:100%;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  padding:6vh 20px;
+  gap:22px;
+}
+
+.letter-caption{
+  font-family:'Mali', sans-serif;
+  text-align:center;
+  color:#fdf1da;
+  line-height:1.6;
+}
+.letter-caption .to{ font-size:clamp(1.1rem,2vw + .5rem,1.6rem); }
+.letter-caption .ask{ font-size:1rem; opacity:.75; margin-top:6px; display:block; }
+
+/* --- phong thư --- */
+.envelope-stage{
+  perspective:1400px;
+  transition:transform 1.4s var(--ease-soft), filter 1.4s var(--ease-soft);
+}
+.envelope-stage.is-zoomed{ transform:scale(1.06); }
+.envelope-stage.is-blurred{ filter:blur(3px); opacity:.35; }
+
+.envelope{
+  position:relative;
+  width:min(78vw, 300px);
+  height:min(52vw, 200px);
+  transform-style:preserve-3d;
+  transform-origin:center center;
+}
+.envelope.is-shaking{ animation:shake .42s cubic-bezier(.36,.07,.19,.97); }
+@keyframes shake{
+  0%,100%{ transform:translateX(0) rotate(0); }
+  16%{ transform:translateX(-3px) rotate(-.7deg); }
+  32%{ transform:translateX(3px) rotate(.7deg); }
+  48%{ transform:translateX(-2px) rotate(-.45deg); }
+  64%{ transform:translateX(2px) rotate(.45deg); }
+  82%{ transform:translateX(-1px) rotate(-.2deg); }
+}
+
+.envelope .back{
+  position:absolute; inset:0;
+  background:
+    repeating-linear-gradient(115deg, rgba(0,0,0,.02) 0 2px, transparent 2px 6px),
+    linear-gradient(180deg, var(--paper-cream), #ecdcb2);
+  border-radius:4px;
+  box-shadow:0 18px 40px rgba(0,0,0,.45);
+}
+.envelope .paper{
+  position:absolute;
+  left:8%; right:8%;
+  bottom:6%;
+  height:78%;
+  background:linear-gradient(180deg,#fffdf6,#f6ecd4);
+  border-radius:3px;
+  box-shadow:0 8px 22px rgba(0,0,0,.25);
+  transition:transform 1.35s var(--ease-soft), box-shadow 1.35s ease;
+  transform:translateY(6%);
+  z-index:2;
+}
+.envelope.is-paper-out .paper{
+  transform:translateY(-42%) scale(1.005);
+  box-shadow:0 14px 28px rgba(0,0,0,.20);
+}
+
+.envelope .flap{
+  position:absolute;
+  top:0; left:0; right:0;
+  height:56%;
+  background:linear-gradient(160deg, #f3e2b6, #e2c990);
+  clip-path:polygon(0 0, 100% 0, 50% 100%);
+  transform-origin:top center;
+  transform:rotateX(0deg);
+  transition:transform 1.75s cubic-bezier(.25,.46,.45,.94);
+  z-index:3;
+  box-shadow:0 4px 10px rgba(0,0,0,.15);
+  will-change:transform;
+  backface-visibility:hidden;
+}
+.envelope.is-flap-open .flap{
+  transform:rotateX(-142deg);
+}
+
+.wax-seal{
+  position:absolute;
+  top:34%; left:50%;
+  width:34px; height:34px;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  background:radial-gradient(circle at 35% 30%, #ff8a6a, var(--lantern-red) 70%);
+  box-shadow:0 2px 6px rgba(0,0,0,.35);
+  z-index:4;
+  display:flex; align-items:center; justify-content:center;
+  font-size:.75rem;
+  color:#ffe6d8;
+  transition:box-shadow .5s ease, opacity .55s ease, transform .55s ease;
+}
+.wax-seal.is-glowing{ box-shadow:0 0 22px rgba(255,140,90,.9), 0 2px 6px rgba(0,0,0,.35); }
+.envelope.is-seal-open .wax-seal{ opacity:0; transform:translate(-50%,-50%) scale(.8); }
+
+.mini-star-lantern{
+  position:absolute;
+  right:-10%; bottom:-14%;
+  width:56px; height:56px;
+  opacity:.9;
+}
+
+.open-btn{
+  font-size:.95rem;
+  padding:11px 28px;
+  border-radius:999px;
+  color:#fdf1da;
+  border:1px solid rgba(253,241,218,.5);
+  background:rgba(255,255,255,.04);
+  transition:background .3s ease, transform .3s ease;
+}
+.open-btn:hover{ background:rgba(255,255,255,.12); transform:scale(1.04); }
+.open-btn.is-hidden{ display:none; }
+
+/* --- nội dung thư (giấy lớn, xuất hiện sau khi mở phong bì) --- */
+.letter-sheet{
+  position:absolute; inset:0;
+  z-index:6;
+  display:flex; align-items:center; justify-content:center;
+  padding:5vh 16px;
+  opacity:0;
+  visibility:hidden;
+  transition:opacity 1.4s var(--ease-soft);
+}
+.letter-sheet.is-visible{ opacity:1; visibility:visible; }
+
+.letter-paper{
+  width:min(640px, 92vw);
+  max-height:82vh;
+  overflow-y:auto;
+  scroll-behavior:smooth;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.015), transparent 20%),
+    var(--paper-cream);
+  color:var(--ink);
+  border-radius:2px;
+  padding:clamp(24px,4vw,52px) clamp(20px,5vw,56px);
+  box-shadow:0 30px 70px rgba(0,0,0,.55), inset 0 0 60px rgba(120,90,40,.08);
+  border:1px solid rgba(120,90,40,.15);
+  /* trạng thái khởi đầu: nằm thấp hẳn xuống dưới, mờ và hơi nhỏ lại —
+     để khi hiện ra, người xem thấy rõ tờ giấy "trồi lên" từ phía dưới
+     chứ không chỉ là một cú fade tại chỗ */
+  opacity:0;
+  transform:translateY(64px) scale(.96);
+  transition:opacity 1.6s var(--ease-soft), transform 1.6s var(--ease-soft);
+}
+.letter-sheet.is-visible .letter-paper{
+  opacity:1;
+  transform:translateY(0) scale(1);
+}
+.letter-paper::-webkit-scrollbar{ width:6px; }
+.letter-paper::-webkit-scrollbar-thumb{ background:rgba(120,90,40,.25); border-radius:4px; }
+
+.letter-body p{
+  font-size:clamp(1.05rem, .5vw + 1rem, 1.28rem);
+  line-height:1.85;
+  margin-bottom:1.1em;
+  color:var(--ink-soft);
+}
+.letter-body .line{
+  /* container luôn hiển thị — hiệu ứng mượt nằm ở từng từ bên trong (.word) */
+}
+.letter-body .word{
+  display:inline-block;
+  opacity:0;
+  transform:translateY(12px);
+  filter:blur(6px);
+  transition:opacity .9s var(--ease-soft), transform .9s var(--ease-soft), filter .9s var(--ease-soft);
+}
+.letter-body .word.is-in{
+  opacity:1;
+  transform:translateY(0);
+  filter:blur(0);
+}
+.letter-body .highlight{
+  color:#a35a1f;
+  text-shadow:0 0 14px rgba(214,150,70,.35);
+  font-family:'Mali', sans-serif;
+}
+.letter-body .highlight.is-shown{
+  /* câu cảm xúc "thở" nhẹ bằng glow sau khi từ cuối cùng hiện xong */
+  animation:highlightGlow 3.2s ease-in-out .2s 1;
+}
+@keyframes highlightGlow{
+  0%,100%{ text-shadow:0 0 14px rgba(214,150,70,.35); }
+  50%{ text-shadow:0 0 26px rgba(214,150,70,.65); }
+}
+.type-cursor{
+  display:inline-block;
+  width:2px; height:1em;
+  background:var(--ink-soft);
+  vertical-align:-.15em;
+  margin-left:2px;
+  opacity:.85;
+  animation:blink 1s ease-in-out infinite;
+}
+@keyframes blink{ 0%,100%{ opacity:.85; } 50%{ opacity:0; } }
+
+/* =====================================================================
+   5. CẢNH 3 — KẾT THÚC
+   ===================================================================== */
+#scene-end .content{
+  position:relative; z-index:6;
+  height:100%;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  text-align:center;
+  gap:26px;
+  padding:0 22px;
+}
+.end-line{
+  font-family:'Mali', sans-serif;
+  font-size:clamp(1.15rem, 2vw + .5rem, 1.7rem);
+  color:#fdf1da;
+  opacity:0;
+  transform:translateY(8px);
+  transition:opacity 1.2s ease, transform 1.2s ease;
+}
+.end-line.is-shown{ opacity:1; transform:translateY(0); }
+
+.hug-btn{
+  font-size:1rem;
+  padding:13px 30px;
+  border-radius:999px;
+  color:#3a2a12;
+  background:linear-gradient(180deg,#ffe9b8,var(--gold-glow));
+  box-shadow:0 6px 24px rgba(255,190,90,.35);
+  transition:opacity .8s ease, transform .35s ease;
+}
+.hug-btn:hover{ transform:scale(1.06); }
+.hug-btn.is-hidden{ opacity:0; pointer-events:none; }
+
+.warm-glow{
+  position:absolute; inset:0;
+  background:radial-gradient(circle at 50% 55%, rgba(255,205,120,.55), transparent 65%);
+  opacity:0;
+  transition:opacity 1.6s ease;
+  z-index:2;
+}
+.warm-glow.is-showing{ opacity:1; }
+
+.heart{
+  position:relative;
+  width:46px; height:42px;
+  opacity:0;
+  transform:scale(.6);
+  transition:opacity 1s ease, transform 1s var(--ease-soft);
+}
+.heart.is-shown{ opacity:1; transform:scale(1); animation:heartbeat 1.8s ease-in-out infinite 1s; }
+.heart::before,.heart::after{
+  content:'';
+  position:absolute;
+  top:0; width:26px; height:40px;
+  background:var(--lantern-orange);
+  border-radius:26px 26px 0 0;
+}
+.heart::before{ left:23px; transform:rotate(-45deg); transform-origin:0 100%; }
+.heart::after{ left:-3px; transform:rotate(45deg); transform-origin:100% 100%; }
+@keyframes heartbeat{
+  0%,100%{ transform:scale(1); }
+  25%{ transform:scale(1.12); }
+  40%{ transform:scale(1); }
+}
+
+.final-words{
+  display:flex; flex-direction:column; gap:6px;
+}
+.final-words p{ opacity:0; transition:opacity 1.4s ease; }
+.final-words p.is-shown{ opacity:1; }
+.final-words .en{ font-family:'Mali', sans-serif; font-size:clamp(1.2rem,2vw + .6rem,1.8rem); color:#fff6e2; }
+.final-words .vi{ font-size:1.05rem; color:#e9d9b6; }
+
+/* particle nhẹ bay qua màn hình (dùng cho phần đọc thư & phần kết) */
+.petal{
+  position:absolute;
+  width:6px; height:6px;
+  border-radius:50%;
+  background:radial-gradient(circle, #ffe9b8, rgba(255,233,184,0));
+  opacity:.7;
+  animation:floatUp linear forwards;
+  z-index:7;
+  pointer-events:none;
+}
+@keyframes floatUp{
+  from{ transform:translateY(0) translateX(0); opacity:0; }
+  10%{ opacity:.8; }
+  100%{ transform:translateY(-70vh) translateX(var(--drift,20px)); opacity:0; }
+}
+
+
+/* --- ẢNH KỶ NIỆM BAY LÊN Ở CẢNH KẾT --- */
+.floating-photos{
+  position:absolute;
+  inset:0;
+  z-index:4;
+  overflow:hidden;
+  pointer-events:none;
+}
+
+.floating-photo{
+  position:absolute;
+  left:var(--start-x);
+  bottom:-24vh;
+  width:var(--photo-size);
+  aspect-ratio:3 / 4;
+  object-fit:cover;
+  border-radius:14px;
+  opacity:0;
+  transform:translate3d(0,0,0) rotate(var(--rotate-start)) scale(.88);
+  filter:drop-shadow(0 10px 22px rgba(0,0,0,.32));
+  will-change:transform, opacity;
+  animation:photoFloat var(--float-duration) var(--float-delay) linear forwards;
+}
+
+@keyframes photoFloat{
+  0%{
+    opacity:0;
+    transform:translate3d(0,0,0) rotate(var(--rotate-start)) scale(.88);
+  }
+  8%{
+    opacity:.9;
+    transform:translate3d(var(--drift-1),-11vh,0) rotate(calc(var(--rotate-start) + var(--rotate-mid))) scale(.92);
+  }
+  24%{
+    opacity:1;
+    transform:translate3d(var(--drift-2),-31vh,0) rotate(calc(var(--rotate-start) + var(--rotate-mid))) scale(.95);
+  }
+  42%{
+    opacity:1;
+    transform:translate3d(var(--drift-3),-54vh,0) rotate(calc(var(--rotate-start) + var(--rotate-end))) scale(.99);
+  }
+  60%{
+    opacity:1;
+    transform:translate3d(var(--drift-4),-77vh,0) rotate(calc(var(--rotate-start) + var(--rotate-end))) scale(1.02);
+  }
+  78%{
+    opacity:.9;
+    transform:translate3d(var(--drift-5),-101vh,0) rotate(calc(var(--rotate-start) + var(--rotate-end))) scale(1.04);
+  }
+  92%{
+    opacity:.55;
+    transform:translate3d(var(--drift-6),-123vh,0) rotate(calc(var(--rotate-start) + var(--rotate-end))) scale(1.06);
+  }
+  100%{
+    opacity:0;
+    transform:translate3d(var(--drift-7),-138vh,0) rotate(calc(var(--rotate-start) + var(--rotate-end))) scale(1.07);
+  }
+}
+
+@media (max-width:640px){
+  .floating-photo{
+    width:var(--photo-size-mobile);
+    border-radius:11px;
+  }
+}
+
+/* =====================================================================
+   6. ĐIỀU KHIỂN ÂM THANH
+   ===================================================================== */
+.audio-toggle{
+  position:fixed;
+  top:18px; right:18px;
+  z-index:100;
+  width:42px; height:42px;
+  border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(10,16,36,.55);
+  border:1px solid rgba(255,255,255,.18);
+  backdrop-filter:blur(6px);
+  font-size:1.1rem;
+  color:#fdf1da;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .6s ease, transform .3s ease;
+}
+.audio-toggle.is-visible{ opacity:1; pointer-events:auto; }
+.audio-toggle:hover{ transform:scale(1.08); }
+
+/* =====================================================================
+   7. RESPONSIVE
+   ===================================================================== */
+@media (max-width:640px){
+  .moon-wrap{ top:6%; }
+  .moon{ width:82px; height:82px; }
+  .moon-halo{ width:240px; height:240px; }
+  .star-lantern{ width:92px; height:92px; }
+  .letter-paper{ padding:22px 18px; }
+  .lantern{ width:26px; height:34px; }
+}
+
+
+/* --- FADE IN KHI VỪA MỞ TRANG --- */
+html::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  background:#050a1c;
+  opacity:1;
+  pointer-events:none;
+  z-index:10000;
+  animation:pageLoadFadeIn 1.8s ease-out forwards;
+}
+@keyframes pageLoadFadeIn{
+  0%{ opacity:1; }
+  100%{ opacity:0; visibility:hidden; }
+}
+
+/* --- LỚP CHUYỂN CẢNH TOÀN TRANG: tránh giật khi scene cũ đang fade-out --- */
+.global-scene-veil{
+  position:fixed;
+  inset:0;
+  background:#000;
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  z-index:9999;
+  transition:opacity .9s ease, visibility 0s linear .9s;
+}
+.global-scene-veil.is-showing{
+  opacity:.94;
+  visibility:visible;
+  transition:opacity .9s ease, visibility 0s linear 0s;
+}
+</style>
+</head>
+<body>
+
+<!-- nút bật/tắt nhạc, hiện ra sau khi nhạc bắt đầu -->
+<button class="audio-toggle" id="audioToggle" aria-label="Tắt / bật nhạc">🔊</button>
+
+<!-- ================= CẢNH 1: MỞ ĐẦU ================= -->
+<section class="scene is-active" id="scene-intro">
+  <div class="sky-bg"></div>
+  <div class="stars" id="starsIntro"></div>
+  <div class="clouds" id="cloudsIntro"></div>
+  <div class="moon-wrap" id="moonWrapIntro">
+    <div class="moon-halo"></div>
+    <div class="moon"></div>
+  </div>
+  <div class="lanterns-layer" id="lanternsIntro"></div>
+  <div class="roofline">
+    <svg viewBox="0 0 800 120" preserveAspectRatio="none">
+      <path d="M0,120 L0,70 L80,40 L160,70 L240,35 L320,68 L400,30 L480,68 L560,38 L640,70 L720,42 L800,70 L800,120 Z" fill="#04070f"/>
+    </svg>
+  </div>
+
+  <div class="content">
+    <div class="star-lantern"><div class="frame"></div></div>
+    <p class="intro-line" id="introLine">Đêm nay... anh có một điều muốn dành cho em.</p>
+    <button class="cta" id="continueBtn">Em có muốn tiếp tục? ♡</button>
+  </div>
+
+  <div class="fade-veil" id="introVeil"></div>
+</section>
+
+<!-- ================= CẢNH 2: LÁ THƯ ================= -->
+<section class="scene" id="scene-letter">
+  <div class="sky-bg"></div>
+  <div class="stars" id="starsLetter"></div>
+  <div class="clouds" id="cloudsLetter"></div>
+  <div class="moon-wrap" id="moonWrapLetter">
+    <div class="moon-halo"></div>
+    <div class="moon"></div>
+  </div>
+  <div class="lanterns-layer" id="lanternsLetter"></div>
+
+  <div class="content">
+    <p class="letter-caption" id="letterCaption">
+      <span class="to">Gửi bé – người đã cùng anh đi qua những mùa Trung Thu.</span>
+      <span class="ask">Mở ra hennn?</span>
+    </p>
+
+    <div class="envelope-stage" id="envelopeStage">
+      <div class="envelope" id="envelope">
+        <div class="back"></div>
+        <div class="paper"></div>
+        <div class="flap"></div>
+        <div class="wax-seal" id="waxSeal">中</div>
+        <div class="mini-star-lantern">
+          <div class="star-lantern" style="width:100%;height:100%;"><div class="frame"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <button class="open-btn" id="openLetterBtn">Mở thư ♡</button>
+  </div>
+
+  <!-- lá thư lớn, xuất hiện sau khi mở phong bì -->
+  <div class="letter-sheet" id="letterSheet">
+    <div class="letter-paper" id="letterPaper">
+      <div class="letter-body" id="letterBody"></div>
+    </div>
+  </div>
+
+  <div class="fade-veil" id="letterVeil"></div>
+</section>
+
+<!-- ================= CẢNH 3: KẾT THÚC ================= -->
+<section class="scene" id="scene-end">
+  <div class="sky-bg"></div>
+  <div class="stars" id="starsEnd"></div>
+  <div class="moon-wrap" id="moonWrapEnd">
+    <div class="moon-halo"></div>
+    <div class="moon"></div>
+  </div>
+  <div class="warm-glow" id="warmGlow"></div>
+
+  <div class="content">
+    <p class="end-line" id="endLine1">Chỉ là một bất ngờ nhỏ thôi...</p>
+    <p class="end-line" id="endLine2">...nhưng đối với tớ, em là tất cả. ♡</p>
+
+    <button class="hug-btn" id="hugBtn">Ôm một cái nhé? 🤍</button>
+
+    <div class="heart" id="heartShape"></div>
+
+    <div class="final-words">
+      <p class="en" id="finalEn">Chúc em có một mùa Trung Thu thật vui vẻ.</p>
+      <p class="vi" id="finalVi">Cảm ơn em vì đã ở lại.</p>
+    </div>
+  </div>
+</section>
+
+<script>
+/* =========================================================================
+   NỘI DUNG THƯ — chỉnh sửa ở đây.
+   Mỗi phần tử của mảng là 1 dòng. Đặt highlight:true cho các câu muốn
+   được tô sáng vàng nhẹ và fade-in chậm hơn.
+   ========================================================================= */
+const LETTER_LINES = [
+  { text: "Gửi em," },
+  { text: "Lại một mùa Trung Thu nữa rồi." },
+  { text: "Bo chợt nhận ra rằng... đã bao lâu rồi chúng ta cùng nhau đi qua những mùa trăng như thế này." },
+  { text: "Từ những ngày đầu tiên còn vụng về, có những lần làm em tức đến phát khóc, đến những ngày chúng ta đã quen với sự xuất hiện của nhau trong từng điều nhỏ bé của cuộc sống." },
+  { text: "Cảm ơn em <3.", highlight: true },
+  { text: "Cảm ơn em vì đã ở bên tớ trong những năm tháng vừa qua. Cảm ơn vì đã cùng tớ cười, cùng tớ buồn, cùng tớ trưởng thành và cùng tớ đi qua những ngày chẳng phải lúc nào cũng dễ dàng." },
+  { text: "Có thể tớ không phải là người giỏi nói những lời hoa mỹ." },
+  { text: "Nhưng có một điều tớ luôn biết... tớ thật sự trân trọng những năm tháng tớ có em bên cạnh." },
+  { text: "Và nếu thời gian có thể quay lại, tớ vẫn muốn được gặp em, vẫn muốn chọn em, và vẫn muốn cùng em đi qua thật nhiều mùa Trung Thu nữa." },
+  { text: "Tớ muốn dành cho em một bất ngờ nho nhỏ... không phải thứ gì quá lớn lao. Chỉ là một điều nhỏ bé, nhưng đủ để nói với em rằng..." },
+  { text: "Tớ yêu em.", highlight: true },
+  { text: "Cảm ơn em vì đã trở thành một phần thật đẹp trong cuộc đời tớ." },
+  { text: "Chúc em một mùa Trung Thu thật vui." },
+  { text: "Và... mong rằng những mùa trăng sau... người đứng bên cạnh em..."},
+  { text: "vẫn là Bo. ♡", highlight: true }
+];
+
+/* =========================================================================
+   ÂM NHẠC — thay đường dẫn dưới đây bằng file nhạc của bạn trong /assets
+   ========================================================================= */
+const music = new Audio("assets/nhactinhiu.MP3");
+music.loop = true;
+music.volume = 0;
+let musicStarted = false;
+let userMuted = false;
+let volumeBeforeMute = 0.7;
+
+function fadeMusicIn(target = 0.7, durationMs = 4000){
+  const steps = 8;
+  const stepTime = durationMs / steps;
+  const stepAmount = target / steps;
+  let current = 0;
+  const timer = setInterval(() => {
+    current += stepAmount;
+    music.volume = Math.min(current, target);
+    if(current >= target){ clearInterval(timer); }
+  }, stepTime);
+}
+
+function startMusic(){
+  if(musicStarted) return;
+  musicStarted = true;
+  music.play().then(() => {
+    fadeMusicIn(0.7, 4000);
+    document.getElementById('audioToggle').classList.add('is-visible');
+  }).catch(() => {
+    /* trình duyệt chặn autoplay hoặc thiếu file nhạc — trang vẫn hoạt động bình thường */
+    document.getElementById('audioToggle').classList.add('is-visible');
+  });
+}
+
+document.getElementById('audioToggle').addEventListener('click', () => {
+  const btn = document.getElementById('audioToggle');
+  if(!userMuted){
+    volumeBeforeMute = music.volume || 0.7;
+    userMuted = true;
+    music.volume = 0;
+    btn.textContent = '🔇';
+  } else {
+    userMuted = false;
+    btn.textContent = '🔊';
+    fadeMusicIn(volumeBeforeMute, 1200);
+  }
+});
+
+/* =========================================================================
+   TẠO SAO / MÂY / ĐÈN LỒNG cho từng cảnh
+   ========================================================================= */
+function scatterStars(containerId, count){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  const frag = document.createDocumentFragment();
+  for(let i = 0; i < count; i++){
+    const s = document.createElement('div');
+    s.className = 'star';
+    s.style.left = Math.random() * 100 + '%';
+    s.style.top = Math.random() * 65 + '%';
+    s.style.animationDelay = (Math.random() * 3).toFixed(2) + 's';
+    const size = (Math.random() * 1.6 + 1).toFixed(1);
+    s.style.width = size + 'px';
+    s.style.height = size + 'px';
+    frag.appendChild(s);
+  }
+  el.appendChild(frag);
+}
+
+function scatterClouds(containerId, count){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  for(let i = 0; i < count; i++){
+    const c = document.createElement('div');
+    c.className = 'cloud';
+    const w = 140 + Math.random() * 160;
+    c.style.width = w + 'px';
+    c.style.height = (w * .28) + 'px';
+    c.style.top = (8 + Math.random() * 30) + '%';
+    c.style.animationDuration = (70 + Math.random() * 50) + 's';
+    c.style.animationDelay = (-Math.random() * 60) + 's';
+    el.appendChild(c);
+  }
+}
+
+function scatterLanterns(containerId, positions){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  positions.forEach((p, i) => {
+    const l = document.createElement('div');
+    l.className = 'lantern';
+    l.style.left = p.left;
+    l.style.top = p.top;
+    l.style.animationDelay = (i * .6) + 's';
+    const body = document.createElement('div');
+    body.className = 'body';
+    l.appendChild(body);
+    el.appendChild(l);
+  });
+}
+
+const LANTERN_POSITIONS = [
+  { left:'8%',  top:'20%' },
+  { left:'18%', top:'34%' },
+  { left:'82%', top:'18%' },
+  { left:'90%', top:'32%' },
+  { left:'70%', top:'12%' }
+];
+
+scatterStars('starsIntro', 70);
+scatterStars('starsLetter', 60);
+scatterStars('starsEnd', 90);
+scatterClouds('cloudsIntro', 3);
+scatterClouds('cloudsLetter', 3);
+scatterLanterns('lanternsIntro', LANTERN_POSITIONS);
+scatterLanterns('lanternsLetter', LANTERN_POSITIONS);
+
+/* =========================================================================
+   PARALLAX theo chuột — tắt trên thiết bị cảm ứng / màn hình nhỏ
+   ========================================================================= */
+const supportsParallax = window.matchMedia('(pointer:fine)').matches && window.innerWidth > 768;
+
+if(supportsParallax){
+  document.addEventListener('mousemove', (e) => {
+    const mx = (e.clientX / window.innerWidth - 0.5);
+    const my = (e.clientY / window.innerHeight - 0.5);
+
+    document.querySelectorAll('.moon-wrap').forEach(m => {
+      m.style.transform = `translate(calc(-50% + ${mx * 10}px), ${my * 8}px)`;
+    });
+    document.querySelectorAll('.clouds').forEach(c => {
+      c.style.transform = `translate(${mx * 18}px, ${my * 6}px)`;
+    });
+    document.querySelectorAll('.lanterns-layer').forEach(l => {
+      l.style.transform = `translate(${mx * 30}px, ${my * 14}px)`;
+    });
+  });
+}
+
+/* =========================================================================
+   PARTICLE nhẹ bay qua màn hình (dùng khi đọc thư & khi kết thúc)
+   ========================================================================= */
+function spawnPetals(container, durationMs){
+  const end = Date.now() + durationMs;
+  const layer = document.getElementById(container);
+  if(!layer) return;
+  const interval = setInterval(() => {
+    if(Date.now() > end){ clearInterval(interval); return; }
+    const p = document.createElement('div');
+    p.className = 'petal';
+    p.style.left = (10 + Math.random() * 80) + '%';
+    p.style.bottom = '4%';
+    p.style.setProperty('--drift', ((Math.random() - .5) * 60) + 'px');
+    p.style.animationDuration = (5 + Math.random() * 3) + 's';
+    layer.appendChild(p);
+    setTimeout(() => p.remove(), 9000);
+  }, 900);
+}
+
+/* =========================================================================
+   CHUYỂN CẢNH có hiệu ứng tối dần / sáng lại
+   ========================================================================= */
+let globalSceneVeil = null;
+function getGlobalSceneVeil(){
+  if(globalSceneVeil) return globalSceneVeil;
+  globalSceneVeil = document.createElement('div');
+  globalSceneVeil.className = 'global-scene-veil';
+  globalSceneVeil.setAttribute('aria-hidden','true');
+  document.body.appendChild(globalSceneVeil);
+  return globalSceneVeil;
+}
+
+function switchScene(fromId, toId, veilId){
+  const veil = getGlobalSceneVeil();
+  const from = document.getElementById(fromId);
+  const to = document.getElementById(toId);
+  if(!from || !to) return;
+
+  // Đen kín trước, rồi mới đổi scene.
+  // Quan trọng: scene mới được bật với transition opacity tạm thời = none,
+  // để nó đạt opacity:1 hoàn toàn phía sau màn đen. Nhờ vậy khi màn đen biến mất
+  // sẽ không còn cảnh "đen -> chớp/khựng -> mới hiện scene".
+  veil.classList.add('is-showing');
+
+  setTimeout(() => {
+    from.classList.remove('is-active');
+
+    const previousTransition = to.style.transition;
+    to.style.transition = 'none';
+    to.classList.add('is-active');
+    void to.offsetWidth;
+
+    requestAnimationFrame(() => {
+      // Đợi browser paint scene mới hoàn toàn phía sau veil.
+      requestAnimationFrame(() => {
+        to.style.transition = previousTransition;
+        // Sau khi scene mới đã ổn định, mở màn đen thật đều.
+        setTimeout(() => veil.classList.remove('is-showing'), 180);
+      });
+    });
+  }, 950);
+}
+
+/* =========================================================================
+   CẢNH 1 -> CẢNH 2
+   ========================================================================= */
+document.getElementById('continueBtn').addEventListener('click', () => {
+  startMusic();
+
+  const line = document.getElementById('introLine');
+  const btn = document.getElementById('continueBtn');
+  line.classList.add('is-leaving');
+  btn.classList.add('is-hidden');
+
+  // câu thoại chuyển tiếp, fade + blur-to-clear
+  setTimeout(() => {
+    line.textContent = 'Vậy thì... cùng tớ đi qua một đêm Trung Thu nhé.';
+    line.style.filter = 'blur(8px)';
+    line.classList.remove('is-leaving');
+    requestAnimationFrame(() => {
+      line.style.transition = 'opacity 1.3s ease, filter 1.3s ease';
+      line.style.filter = 'blur(0)';
+    });
+  }, 900);
+
+  setTimeout(() => {
+    switchScene('scene-intro', 'scene-letter', 'letterVeil');
+  }, 3200);
+});
+
+/* =========================================================================
+   ÂM THANH VIẾT THƯ / MỞ PHONG THƯ
+   Tổng hợp bằng Web Audio API, không cần thêm file âm thanh.
+   ========================================================================= */
+function ensureAudioContext(){
+  const ctx = getHeartAudioCtx();
+  if(!ctx) return null;
+  if(ctx.state === 'suspended') ctx.resume();
+  return ctx;
+}
+
+function playLetterOpenSound(){
+  const ctx = ensureAudioContext();
+  if(!ctx) return;
+
+  const now = ctx.currentTime;
+
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(260, now);
+  osc.frequency.exponentialRampToValueAtTime(520, now + .55);
+  gain.gain.setValueAtTime(.0001, now);
+  gain.gain.exponentialRampToValueAtTime(.055, now + .08);
+  gain.gain.exponentialRampToValueAtTime(.0001, now + .7);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + .75);
+
+  const buffer = ctx.createBuffer(1, ctx.sampleRate * .45, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for(let i = 0; i < data.length; i++){
+    const envelope = Math.pow(1 - i / data.length, 1.6);
+    data[i] = (Math.random() * 2 - 1) * envelope;
+  }
+  const source = ctx.createBufferSource();
+  const filter = ctx.createBiquadFilter();
+  const noiseGain = ctx.createGain();
+  source.buffer = buffer;
+  filter.type = 'highpass';
+  filter.frequency.setValueAtTime(1100, now);
+  noiseGain.gain.setValueAtTime(.0001, now);
+  noiseGain.gain.exponentialRampToValueAtTime(.025, now + .04);
+  noiseGain.gain.exponentialRampToValueAtTime(.0001, now + .42);
+  source.connect(filter).connect(noiseGain).connect(ctx.destination);
+  source.start(now);
+  source.stop(now + .45);
+}
+
+
+/* =========================================================================
+   MỞ PHONG THƯ
+   ========================================================================= */
+document.getElementById('openLetterBtn').addEventListener('click', () => {
+  playLetterOpenSound();
+
+  const envelope = document.getElementById('envelope');
+  const seal = document.getElementById('waxSeal');
+  const stage = document.getElementById('envelopeStage');
+  const openBtn = document.getElementById('openLetterBtn');
+  const caption = document.getElementById('letterCaption');
+
+  openBtn.classList.add('is-hidden');
+  caption.style.transition = 'opacity .6s ease';
+  caption.style.opacity = '0';
+
+  envelope.classList.add('is-shaking');
+  seal.classList.add('is-glowing');
+
+  // 1) rung rất nhẹ -> 2) mở nắp hoàn toàn -> 3) dấu sáp tan -> 4) giấy trồi ra
+  // Các mốc sau chỉ bắt đầu khi chuyển động trước đã gần như hoàn tất, tránh cảm giác nắp bị khựng.
+  setTimeout(() => {
+    envelope.classList.remove('is-shaking');
+    envelope.classList.add('is-flap-open');
+  }, 360);
+
+  // cho nắp có trọn một nhịp 1.75s để mở mượt và dừng tự nhiên
+  setTimeout(() => {
+    envelope.classList.add('is-seal-open');
+  }, 1650);
+
+  setTimeout(() => {
+    envelope.classList.add('is-paper-out');
+  }, 1900);
+
+  setTimeout(() => {
+    stage.classList.add('is-zoomed');
+  }, 2250);
+
+  setTimeout(() => {
+    stage.classList.add('is-blurred');
+  }, 3150);
+
+  setTimeout(() => {
+    document.getElementById('letterSheet').classList.add('is-visible');
+    buildLetter();
+    spawnPetals('scene-letter', 30000);
+  }, 3500);
+});
+
+/* =========================================================================
+   AUTO-SCROLL MƯỢT cho khung thư (letter-paper)
+   Tự viết easing thay vì dùng scrollIntoView mặc định của trình duyệt, vì:
+   - scrollIntoView({behavior:'smooth'}) có tốc độ/độ mượt khác nhau tuỳ
+     trình duyệt, không kiểm soát được thời lượng.
+   - Nếu gọi liên tiếp (dòng mới hiện ra trước khi dòng cũ cuộn xong), nó có
+     thể bị ngắt giữa chừng gây giật. Hàm dưới đây luôn huỷ animation cuộn
+     đang chạy dở rồi bắt đầu lại mượt mà tới vị trí mới.
+   ========================================================================= */
+let letterScrollFrame = null;
+function easeInOutQuad(t){ return t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2) / 2; }
+
+function smoothScrollLetter(container, targetTop, durationMs = 900){
+  if(letterScrollFrame) cancelAnimationFrame(letterScrollFrame);
+  const startTop = container.scrollTop;
+  const distance = targetTop - startTop;
+  if(Math.abs(distance) < 1){ return; }
+  const startTime = performance.now();
+
+  function step(now){
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / durationMs, 1);
+    container.scrollTop = startTop + distance * easeInOutQuad(t);
+    if(t < 1){
+      letterScrollFrame = requestAnimationFrame(step);
+    } else {
+      letterScrollFrame = null;
+    }
+  }
+  letterScrollFrame = requestAnimationFrame(step);
+}
+
+// cuộn để một dòng (el) nằm gọn giữa khung .letter-paper
+function scrollLineIntoView(el){
+  const container = document.getElementById('letterPaper');
+  const target = el.offsetTop - (container.clientHeight / 2) + (el.clientHeight / 2);
+  smoothScrollLetter(container, Math.max(0, target), 900);
+}
+
+/* =========================================================================
+   HIỆU ỨNG "VIẾT TAY" TỪNG DÒNG
+   ========================================================================= */
+function buildLetter(){
+  const body = document.getElementById('letterBody');
+  body.innerHTML = '';
+
+  // dựng sẵn toàn bộ chữ ngay từ đầu, mỗi từ là 1 span riêng ở trạng thái ẩn (mờ + lệch + nhòe).
+  // làm vậy thì hiệu ứng "mở dần từng từ" ở dưới mới thực sự có gì để mà mờ->rõ.
+  const paragraphs = LETTER_LINES.map(l => {
+    const p = document.createElement('p');
+    p.className = 'line' + (l.highlight ? ' highlight' : '');
+    const words = l.text.split(' ');
+    const wordEls = [];
+    words.forEach((w, idx) => {
+      const span = document.createElement('span');
+      span.className = 'word';
+      span.textContent = w;
+      p.appendChild(span);
+      wordEls.push(span);
+      if(idx < words.length - 1) p.appendChild(document.createTextNode(' '));
+    });
+    body.appendChild(p);
+    return { el: p, words: wordEls, highlight: !!l.highlight };
+  });
+
+  let i = 0;
+  function revealLine(){
+    if(i >= paragraphs.length) return;
+    const { el, words, highlight } = paragraphs[i];
+
+    let w = 0;
+    // khoảng cách giữa các từ dao động nhẹ quanh 120ms — đủ chậm để mắt
+    // kịp thấy từng từ mờ->rõ, không đè lên nhau như hiện liền cùng lúc
+    function revealWord(){
+      if(w < words.length){
+        words[w].classList.add('is-in');
+        w++;
+        const delay = 95 + Math.random() * 55;
+        setTimeout(revealWord, delay);
+      } else {
+        if(highlight) el.classList.add('is-shown'); // kích hoạt glow cho câu cảm xúc
+
+        // tự động cuộn nhẹ nhàng để dòng vừa hiện luôn nằm trong tầm nhìn —
+        // dùng hàm easing tự viết (smoothScrollLetter) để mượt và ổn định
+        // hơn scrollIntoView mặc định, chỉ cuộn bên trong tờ thư.
+        scrollLineIntoView(el);
+
+        i++;
+        setTimeout(revealLine, 650); // nghỉ giữa các dòng, như đang ngừng lại để nghĩ
+      }
+    }
+    revealWord();
+  }
+
+  // QUAN TRỌNG: các span vừa được tạo và gắn vào DOM ở trên, trong CÙNG một
+  // nhịp thực thi JS. Nếu gọi revealLine() ngay lập tức, trình duyệt chưa
+  // kịp "chụp" (paint) trạng thái ẩn ban đầu (opacity:0, blur...) — nên khi
+  // class 'is-in' được thêm vào ngay sau đó, nó gộp 2 thay đổi làm một và
+  // bỏ qua luôn transition, khiến chữ bật thẳng lên thay vì mờ dần.
+  // Ép reflow (đọc offsetHeight) rồi đợi 2 khung hình (double rAF) để đảm
+  // bảo trạng thái ban đầu đã được vẽ ra trước khi bắt đầu hiệu ứng.
+  void body.offsetHeight;
+  requestAnimationFrame(() => requestAnimationFrame(revealLine));
+
+  // sau khi toàn bộ thư hiện xong, chờ rồi chuyển sang cảnh kết
+  const totalWords = LETTER_LINES.reduce((sum, l) => sum + l.text.split(' ').length, 0);
+  const estimatedTime = totalWords * 125 + LETTER_LINES.length * 650 + 3500;
+  setTimeout(() => {
+    switchScene('scene-letter', 'scene-end', 'letterVeil');
+    runEndSequence();
+  }, estimatedTime);
+
+  // ---- ZOOM CHẬM DẦN TRONG LÚC ĐỌC ----
+  // Sau khi hiệu ứng "trồi lên" ban đầu của tờ thư hoàn tất (1.6s), bắt đầu
+  // phóng to rất chậm và tuyến tính (linear) trong suốt thời gian đọc thư,
+  // rồi DỪNG LẠI ở một mức cố định (1.06) chứ không phóng to mãi — tạo cảm
+  // giác máy quay đang từ từ tiến lại gần trang thư.
+  const paperEl = document.getElementById('letterPaper');
+  const ZOOM_TARGET = 1.13;
+  setTimeout(() => {
+    const zoomDurationSec = Math.max(6, estimatedTime / 1000 - 2);
+    paperEl.style.transition = `transform ${zoomDurationSec.toFixed(2)}s linear`;
+    paperEl.style.transform = `translateY(0) scale(${ZOOM_TARGET})`;
+  }, 1700);
+}
+
+/* =========================================================================
+   CẢNH KẾT THÚC
+   ========================================================================= */
+function runEndSequence(){
+  spawnPetals('scene-end', 12000);
+
+  setTimeout(() => document.getElementById('endLine1').classList.add('is-shown'), 1600);
+  setTimeout(() => document.getElementById('endLine2').classList.add('is-shown'), 3400);
+}
+
+
+/* =========================================================================
+   ẢNH KỶ NIỆM BAY LÊN — chỉ được khởi động sau khi bấm nút trái tim.
+   Không thêm/sửa HTML có sẵn: lớp ảnh được tạo động bằng JavaScript.
+   Đặt 16 ảnh tại assets/images/01.jpg ... 16.jpg
+   ========================================================================= */
+const HEART_PHOTO_SOURCES = Array.from({length:16}, (_, i) =>
+  `assets/images/${String(i + 1).padStart(2, '0')}.jpg`
+);
+
+let floatingPhotosStarted = false;
+let floatingPhotoIndex = 0;
+let floatingPhotoTimer = null;
+
+function createFloatingPhoto(){
+  const scene = document.getElementById('scene-end');
+  if(!scene) return;
+
+  let layer = scene.querySelector('.floating-photos');
+  if(!layer){
+    layer = document.createElement('div');
+    layer.className = 'floating-photos';
+    scene.appendChild(layer);
+  }
+
+  const img = document.createElement('img');
+  img.className = 'floating-photo';
+  img.src = HEART_PHOTO_SOURCES[floatingPhotoIndex % HEART_PHOTO_SOURCES.length];
+  img.alt = '';
+  img.decoding = 'async';
+  img.loading = 'eager';
+
+  /* Mỗi tấm có một quỹ đạo hơi khác để chuyển động tự nhiên hơn. */
+  const startX = 5 + Math.random() * 86;
+  const size = 82 + Math.random() * 56; // desktop: 82–138px
+  const duration = 18 + Math.random() * 6; // bay từ từ: 18–24 giây
+  const delay = 0.05;
+  const rotateStart = (Math.random() * 10 - 5).toFixed(2) + 'deg';
+  const rotateMid = (Math.random() * 8 - 4).toFixed(2) + 'deg';
+  const rotateEnd = (Math.random() * 10 - 5).toFixed(2) + 'deg';
+  const drift1 = (Math.random() * 80 - 40).toFixed(0) + 'px';
+  const drift2 = (Math.random() * 150 - 75).toFixed(0) + 'px';
+  const drift3 = (Math.random() * 210 - 105).toFixed(0) + 'px';
+  const drift4 = (Math.random() * 280 - 140).toFixed(0) + 'px';
+  const drift5 = (Math.random() * 320 - 160).toFixed(0) + 'px';
+  const drift6 = (Math.random() * 360 - 180).toFixed(0) + 'px';
+  const drift7 = (Math.random() * 400 - 200).toFixed(0) + 'px';
+
+  img.style.setProperty('--start-x', startX.toFixed(2) + '%');
+  img.style.setProperty('--photo-size', size.toFixed(0) + 'px');
+  img.style.setProperty('--photo-size-mobile', Math.max(64, size * .72).toFixed(0) + 'px');
+  img.style.setProperty('--float-duration', duration.toFixed(2) + 's');
+  img.style.setProperty('--float-delay', delay + 's');
+  img.style.setProperty('--rotate-start', rotateStart);
+  img.style.setProperty('--rotate-mid', rotateMid);
+  img.style.setProperty('--rotate-end', rotateEnd);
+  img.style.setProperty('--drift-1', drift1);
+  img.style.setProperty('--drift-2', drift2);
+  img.style.setProperty('--drift-3', drift3);
+  img.style.setProperty('--drift-4', drift4);
+  img.style.setProperty('--drift-5', drift5);
+  img.style.setProperty('--drift-6', drift6);
+  img.style.setProperty('--drift-7', drift7);
+
+  layer.appendChild(img);
+  floatingPhotoIndex++;
+
+  /* Xoá ảnh sau khi bay xong để DOM không phình ra vô hạn. */
+  setTimeout(() => img.remove(), (duration + 1.2) * 1000);
+}
+
+function startFloatingPhotos(){
+  if(floatingPhotosStarted) return;
+  floatingPhotosStarted = true;
+
+  /* Cho vài ảnh đầu lên gần nhau một chút để hiệu ứng bắt đầu mềm hơn. */
+  createFloatingPhoto();
+  setTimeout(createFloatingPhoto, 850);
+  setTimeout(createFloatingPhoto, 1750);
+
+  /* Sau đó cứ đều đặn thả từng ảnh; đủ 16 ảnh sẽ tự quay lại ảnh đầu. */
+  floatingPhotoTimer = setInterval(createFloatingPhoto, 2100);
+}
+
+/* =========================================================================
+   ÂM THANH NHỊP TIM — tổng hợp trực tiếp bằng Web Audio API (không cần file
+   nhạc ngoài, luôn hoạt động). Mỗi nhịp gồm 2 tiếng "thình" trầm liền nhau
+   kiểu "lub-dub", đồng bộ với animation CSS .heart (heartbeat 1.8s, bắt đầu
+   sau 1s) để tiếng đập khớp với lúc trái tim phồng lên trên màn hình.
+   ========================================================================= */
+let heartAudioCtx = null;
+function getHeartAudioCtx(){
+  if(!heartAudioCtx){
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return null;
+    heartAudioCtx = new AC();
+  }
+  return heartAudioCtx;
+}
+
+function playThump(ctx, startTime, frequency, duration, peakVolume){
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(frequency, startTime);
+  osc.frequency.exponentialRampToValueAtTime(Math.max(frequency * 0.55, 20), startTime + duration);
+  gain.gain.setValueAtTime(0.0001, startTime);
+  gain.gain.exponentialRampToValueAtTime(peakVolume, startTime + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(startTime);
+  osc.stop(startTime + duration + 0.03);
+}
+
+function playHeartbeatOnce(ctx, startTime, volume){
+  playThump(ctx, startTime,        95, 0.13, volume);        // "lub"
+  playThump(ctx, startTime + 0.17, 72, 0.16, volume * 0.75); // "dub"
+}
+
+function playHeartbeatSequence(beatCount = 5){
+  const ctx = getHeartAudioCtx();
+  if(!ctx) return; // trình duyệt không hỗ trợ Web Audio — bỏ qua trong im lặng
+  if(ctx.state === 'suspended'){ ctx.resume(); }
+
+  const beatPeriodMs = 1800; // khớp với @keyframes heartbeat 1.8s trong CSS
+  const startDelayMs = 1000; // khớp với animation-delay 1s của .heart
+  let beat = 0;
+
+  function scheduleNext(){
+    if(beat >= beatCount) return;
+    // âm lượng nhỏ dần ở những nhịp cuối, như nhịp tim đang lắng lại
+    const volume = 0.22 * (1 - beat / (beatCount + 1));
+    playHeartbeatOnce(ctx, ctx.currentTime, volume);
+    beat++;
+    setTimeout(scheduleNext, beatPeriodMs);
+  }
+  setTimeout(scheduleNext, startDelayMs);
+}
+
+document.getElementById('hugBtn').addEventListener('click', () => {
+  const btn = document.getElementById('hugBtn');
+  btn.classList.add('is-hidden');
+
+  document.getElementById('warmGlow').classList.add('is-showing');
+  document.getElementById('heartShape').classList.add('is-shown');
+  startFloatingPhotos();
+  playHeartbeatSequence(5); // click chuột là user gesture nên AudioContext chắc chắn được phép phát
+
+  setTimeout(() => document.getElementById('finalEn').classList.add('is-shown'), 900);
+  setTimeout(() => document.getElementById('finalVi').classList.add('is-shown'), 1900);
+});
+</script>
+</body>
+</html>
